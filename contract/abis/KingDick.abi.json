@@ -1,0 +1,116 @@
+{
+    "functions": [
+        {
+            "name": "buyTickets",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "count",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "ticketsThisCycle",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "settle",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "claimedWinner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "claimedTicketIndex",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "winner",
+                    "type": "ADDRESS"
+                }
+            ]
+        },
+        {
+            "name": "getState",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "cycleId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalTickets",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalPot",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "snapshotBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "currentBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "kingAddress",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "kingStreak",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "lastWinner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "lastPot",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "settled",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getMyTickets",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "wallet",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "ticketsThisCycle",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "rolloverTickets",
+                    "type": "UINT256"
+                }
+            ]
+        }
+    ],
+    "events": []
+}
