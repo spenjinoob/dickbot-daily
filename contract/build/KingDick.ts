@@ -78,9 +78,9 @@ export class KingDick extends OP_NET {
 
         const buyer         = Blockchain.tx.sender;
         const snapshotBlock: u64 = this.cycleStart.value.toU64() + SNAPSHOT_OFFSET;
-        const totalCost     = SafeMath.mul(count, u256.fromU64(5000000000));
+        const totalCost     = SafeMath.mul(count, u256.fromString('50000000000000000000'));
 
-        TransferHelper.transferFrom(this._moto(), buyer, Blockchain.contractAddress, SafeMath.mul(count, u256.fromU64(5000000000)));
+        TransferHelper.transferFrom(this._moto(), buyer, Blockchain.contractAddress, totalCost);
 
         const cycleKey = this._key(this.cycleId.value, buyer);
 
@@ -216,13 +216,13 @@ export class KingDick extends OP_NET {
         return Address.fromUint8Array(val.toUint8Array(true));
     }
 
-    // Hardcoded MOTO address bytes
+    // Hardcoded MOTO address bytes (fd4473840751d58d9f8b73bdd57d6c5260453d5518bd7cd02d0a4cf3df9bf4dd)
     private _moto(): Address {
         const b = new Uint8Array(32);
-        b[0]=10;b[1]=103;b[2]=50;b[3]=72;b[4]=154;b[5]=49;b[6]=230;b[7]=222;
-        b[8]=7;b[9]=145;b[10]=122;b[11]=40;b[12]=255;b[13]=125;b[14]=243;b[15]=17;
-        b[16]=252;b[17]=95;b[18]=152;b[19]=246;b[20]=225;b[21]=102;b[22]=73;b[23]=67;
-        b[24]=172;b[25]=28;b[26]=63;b[27]=231;b[28]=137;b[29]=59;b[30]=218;b[31]=181;
+        b[0]=253;b[1]=68;b[2]=115;b[3]=132;b[4]=7;b[5]=81;b[6]=213;b[7]=141;
+        b[8]=159;b[9]=139;b[10]=115;b[11]=189;b[12]=213;b[13]=125;b[14]=108;b[15]=82;
+        b[16]=96;b[17]=69;b[18]=61;b[19]=85;b[20]=24;b[21]=189;b[22]=124;b[23]=208;
+        b[24]=45;b[25]=10;b[26]=76;b[27]=243;b[28]=223;b[29]=155;b[30]=244;b[31]=221;
         return Address.fromUint8Array(b);
     }
 

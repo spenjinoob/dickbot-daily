@@ -4,6 +4,18 @@ import { CallResult, OPNetEvent, IOP_NETContract } from 'opnet';
 // ------------------------------------------------------------------
 // Event Definitions
 // ------------------------------------------------------------------
+export type TicketsPurchasedEvent = {
+    readonly buyer: Address;
+    readonly count: bigint;
+    readonly totalCost: bigint;
+    readonly cycleId: bigint;
+};
+export type CycleSettledEvent = {
+    readonly winner: Address;
+    readonly pot: bigint;
+    readonly settler: Address;
+    readonly cycleId: bigint;
+};
 
 // ------------------------------------------------------------------
 // Call Results
@@ -14,9 +26,9 @@ import { CallResult, OPNetEvent, IOP_NETContract } from 'opnet';
  */
 export type BuyTickets = CallResult<
     {
-        ticketsThisCycle: bigint;
+        tickets: bigint;
     },
-    OPNetEvent<never>[]
+    OPNetEvent<TicketsPurchasedEvent>[]
 >;
 
 /**
@@ -26,7 +38,7 @@ export type Settle = CallResult<
     {
         winner: Address;
     },
-    OPNetEvent<never>[]
+    OPNetEvent<CycleSettledEvent>[]
 >;
 
 /**
@@ -34,16 +46,7 @@ export type Settle = CallResult<
  */
 export type GetState = CallResult<
     {
-        cycleId: bigint;
-        totalTickets: bigint;
-        totalPot: bigint;
-        snapshotBlock: bigint;
-        currentBlock: bigint;
-        kingAddress: Address;
-        kingStreak: bigint;
-        lastWinner: Address;
-        lastPot: bigint;
-        settled: boolean;
+        state: Uint8Array;
     },
     OPNetEvent<never>[]
 >;
@@ -53,8 +56,7 @@ export type GetState = CallResult<
  */
 export type GetMyTickets = CallResult<
     {
-        ticketsThisCycle: bigint;
-        rolloverTickets: bigint;
+        tickets: bigint;
     },
     OPNetEvent<never>[]
 >;
@@ -64,7 +66,7 @@ export type GetMyTickets = CallResult<
 // ------------------------------------------------------------------
 export interface IKingDick extends IOP_NETContract {
     buyTickets(count: bigint): Promise<BuyTickets>;
-    settle(claimedWinner: Address, claimedTicketIndex: bigint): Promise<Settle>;
+    settle(purchaseIndex: bigint): Promise<Settle>;
     getState(): Promise<GetState>;
     getMyTickets(wallet: Address): Promise<GetMyTickets>;
 }

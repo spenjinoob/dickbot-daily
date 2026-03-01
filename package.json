@@ -1,0 +1,10 @@
+{
+  "name": "kingdick-test",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@btc-vision/bitcoin": "^7.0.0-rc.6",
+    "@btc-vision/transaction": "^1.8.0-rc.10",
+    "opnet": "^1.8.1-rc.17"
+  }
+}

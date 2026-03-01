@@ -13,7 +13,7 @@
             ],
             "outputs": [
                 {
-                    "name": "ticketsThisCycle",
+                    "name": "tickets",
                     "type": "UINT256"
                 }
             ]
@@ -25,11 +25,7 @@
             "onlyOwner": false,
             "inputs": [
                 {
-                    "name": "claimedWinner",
-                    "type": "ADDRESS"
-                },
-                {
-                    "name": "claimedTicketIndex",
+                    "name": "purchaseIndex",
                     "type": "UINT256"
                 }
             ],
@@ -48,44 +44,8 @@
             "inputs": [],
             "outputs": [
                 {
-                    "name": "cycleId",
-                    "type": "UINT256"
-                },
-                {
-                    "name": "totalTickets",
-                    "type": "UINT256"
-                },
-                {
-                    "name": "totalPot",
-                    "type": "UINT256"
-                },
-                {
-                    "name": "snapshotBlock",
-                    "type": "UINT256"
-                },
-                {
-                    "name": "currentBlock",
-                    "type": "UINT256"
-                },
-                {
-                    "name": "kingAddress",
-                    "type": "ADDRESS"
-                },
-                {
-                    "name": "kingStreak",
-                    "type": "UINT256"
-                },
-                {
-                    "name": "lastWinner",
-                    "type": "ADDRESS"
-                },
-                {
-                    "name": "lastPot",
-                    "type": "UINT256"
-                },
-                {
-                    "name": "settled",
-                    "type": "BOOL"
+                    "name": "state",
+                    "type": "BYTES32"
                 }
             ]
         },
@@ -102,15 +62,56 @@
             ],
             "outputs": [
                 {
-                    "name": "ticketsThisCycle",
-                    "type": "UINT256"
-                },
-                {
-                    "name": "rolloverTickets",
+                    "name": "tickets",
                     "type": "UINT256"
                 }
             ]
         }
     ],
-    "events": []
+    "events": [
+        {
+            "name": "TicketsPurchased",
+            "values": [
+                {
+                    "name": "buyer",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "count",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalCost",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "cycleId",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        },
+        {
+            "name": "CycleSettled",
+            "values": [
+                {
+                    "name": "winner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "pot",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "settler",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "cycleId",
+                    "type": "UINT256"
+                }
+            ],
+            "type": "Event"
+        }
+    ]
 }

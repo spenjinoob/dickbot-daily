@@ -9,4 +9,7 @@ export default defineConfig({
       include: ['buffer', 'crypto', 'stream'],
     }),
   ],
+  define: {
+    global: 'globalThis',
+  },
 })

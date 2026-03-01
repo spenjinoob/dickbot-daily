@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { getContract, JSONRpcProvider, OP_20_ABI } from 'opnet';
 import type { IOP20Contract } from 'opnet';
-import { Address } from '@btc-vision/transaction';
+import type { Address } from '@btc-vision/transaction';
+import type { Network } from '@btc-vision/bitcoin';
 import { CONTRACT_ADDRESS, MOTO_ADDRESS, TICKET_PRICE_MOTO, RPC_URL, NETWORK } from '../config';
 import { KingDickAbi } from '../abi/KingDickAbi';
 import { shortAddr } from '../utils/format';
@@ -11,8 +12,9 @@ import type { ToastType } from './Toast';
 interface BuyTicketsProps {
   gameState: GameState;
   myTickets: MyTickets;
-  wallet: unknown;
   walletAddress: string | null;
+  address: Address | null;
+  network: Network | null;
   connected: boolean;
   onToast: (msg: string, type: ToastType) => void;
   onRefresh: () => void;
@@ -21,8 +23,9 @@ interface BuyTicketsProps {
 export function BuyTickets({
   gameState,
   myTickets,
-  wallet,
   walletAddress,
+  address,
+  network,
   connected,
   onToast,
   onRefresh,
@@ -42,7 +45,7 @@ export function BuyTickets({
   }, [gameState.totalTickets, myTickets.ticketsThisCycle, count]);
 
   async function handleBuy() {
-    if (!wallet || !walletAddress) {
+    if (!walletAddress || !address || !network) {
       onToast('Connect wallet first', 'error');
       return;
     }
@@ -59,42 +62,54 @@ export function BuyTickets({
     setBuyStep('Approving...');
 
     try {
-      const provider = new JSONRpcProvider(RPC_URL, NETWORK);
-      const totalCost = BigInt(count) * BigInt(5000000000);
+      const provider = new JSONRpcProvider({ url: RPC_URL, network: NETWORK });
+      const totalCost = BigInt(count) * 50000000000000000000n;
 
       // 1. Approve MOTO spend
-      const sender = Address.fromString(walletAddress);
       const motoContract = getContract<IOP20Contract>(
-        MOTO_ADDRESS, OP_20_ABI, provider, NETWORK, sender
+        MOTO_ADDRESS, OP_20_ABI, provider, NETWORK, address
       );
-      const spender = Address.fromString(CONTRACT_ADDRESS);
+      const spender = await provider.getPublicKeyInfo(CONTRACT_ADDRESS, true);
       const approveSim = await motoContract.increaseAllowance(spender, totalCost);
       if ('error' in approveSim) throw new Error(String(approveSim.error));
 
-      await (wallet as any).sendTransaction({
-        ...approveSim,
+      await approveSim.sendTransaction({
         signer: null,
         mldsaSigner: null,
+        refundTo: walletAddress,
+        maximumAllowedSatToSpend: 100_000n,
+        network,
       });
 
-      // 2. Buy tickets
-      setBuyStep('Buying...');
+      // Wait for approval to confirm on-chain
+      setBuyStep('Waiting for approval...');
       const contract = getContract<IKingDick>(
-        CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK, sender
+        CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK, address
       );
-      const buySim = await contract.buyTickets(BigInt(count));
-      if ('error' in buySim) throw new Error(String(buySim.error));
-
-      const tx = await (wallet as any).sendTransaction({
-        ...buySim,
-        signer: null,
-        mldsaSigner: null,
-      });
-
-      onToast(`🎟 Tickets purchased! TX: ${shortAddr(tx.hash)}`, 'success');
-      setTimeout(onRefresh, 3000);
-    } catch (e: any) {
-      onToast('Transaction failed: ' + (e.message || e), 'error');
+      for (let attempt = 0; attempt < 30; attempt++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const buySim = await contract.buyTickets(BigInt(count));
+        if (!('error' in buySim)) {
+          // 2. Buy tickets — approval confirmed
+          setBuyStep('Buying...');
+          const txReceipt2 = await buySim.sendTransaction({
+            signer: null,
+            mldsaSigner: null,
+            refundTo: walletAddress,
+            maximumAllowedSatToSpend: 100_000n,
+            network,
+          });
+          const txId = txReceipt2?.transactionId ?? '';
+          onToast(`Tickets purchased! TX: ${shortAddr(txId)}`, 'success');
+          setTimeout(onRefresh, 3000);
+          return;
+        }
+        setBuyStep(`Waiting for approval (${attempt + 1})...`);
+      }
+      throw new Error('Approval not confirmed after 90s — try again');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      onToast('Transaction failed: ' + msg, 'error');
     } finally {
       setBuying(false);
       setBuyStep('');

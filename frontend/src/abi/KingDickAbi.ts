@@ -10,10 +10,7 @@ export const KingDickAbi: BitcoinInterfaceAbi = [
     },
     {
         name: 'settle',
-        inputs: [
-            { name: 'claimedWinner', type: ABIDataTypes.ADDRESS },
-            { name: 'claimedTicketIndex', type: ABIDataTypes.UINT256 },
-        ],
+        inputs: [{ name: 'purchaseIndex', type: ABIDataTypes.UINT256 }],
         outputs: [{ name: 'winner', type: ABIDataTypes.ADDRESS }],
         type: BitcoinAbiTypes.Function,
     },
@@ -31,6 +28,7 @@ export const KingDickAbi: BitcoinInterfaceAbi = [
             { name: 'lastWinner', type: ABIDataTypes.ADDRESS },
             { name: 'lastPot', type: ABIDataTypes.UINT256 },
             { name: 'settled', type: ABIDataTypes.BOOL },
+            { name: 'purchaseCount', type: ABIDataTypes.UINT256 },
         ],
         type: BitcoinAbiTypes.Function,
     },

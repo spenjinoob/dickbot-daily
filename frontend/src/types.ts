@@ -23,6 +23,7 @@ export type GetState = CallResult<
         lastWinner: Address;
         lastPot: bigint;
         settled: boolean;
+        purchaseCount: bigint;
     },
     OPNetEvent<never>[]
 >;
@@ -37,7 +38,7 @@ export type GetMyTickets = CallResult<
 
 export interface IKingDick extends IOP_NETContract {
     buyTickets(count: bigint): Promise<BuyTickets>;
-    settle(claimedWinner: Address, claimedTicketIndex: bigint): Promise<Settle>;
+    settle(purchaseIndex: bigint): Promise<Settle>;
     getState(): Promise<GetState>;
     getMyTickets(wallet: Address): Promise<GetMyTickets>;
 }
@@ -53,6 +54,7 @@ export interface GameState {
     lastWinner: string;
     lastPot: bigint;
     settled: boolean;
+    purchaseCount: number;
 }
 
 export interface MyTickets {

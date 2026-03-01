@@ -1,5 +1,5 @@
 import './App.css';
-import { useWallet } from './hooks/useWallet';
+import { useWalletConnect } from './hooks/useWallet';
 import { useGameState } from './hooks/useGameState';
 import { useToast, Toast } from './components/Toast';
 import { Header } from './components/Header';
@@ -13,17 +13,17 @@ import { HowItWorks } from './components/HowItWorks';
 import { Footer } from './components/Footer';
 
 function App() {
-  const { wallet, walletAddress, connected, connect, disconnect } = useWallet();
-  const { gameState, myTickets, refresh } = useGameState(walletAddress);
-  const { toast, showToast } = useToast();
+  const {
+    walletAddress,
+    address,
+    network,
+    openConnectModal,
+    disconnect,
+  } = useWalletConnect();
 
-  async function handleConnect() {
-    try {
-      await connect();
-    } catch (e: any) {
-      showToast(e.message || 'Failed to connect', 'error');
-    }
-  }
+  const connected = !!walletAddress;
+  const { gameState, myTickets, refresh } = useGameState(walletAddress, address);
+  const { toast, showToast } = useToast();
 
   return (
     <>
@@ -36,7 +36,7 @@ function App() {
         <WalletBar
           connected={connected}
           walletAddress={walletAddress}
-          onConnect={handleConnect}
+          onConnect={openConnectModal}
           onDisconnect={disconnect}
         />
 
@@ -46,8 +46,9 @@ function App() {
         <BuyTickets
           gameState={gameState}
           myTickets={myTickets}
-          wallet={wallet}
           walletAddress={walletAddress}
+          address={address}
+          network={network}
           connected={connected}
           onToast={showToast}
           onRefresh={refresh}
@@ -57,8 +58,9 @@ function App() {
 
         <SettleClaim
           gameState={gameState}
-          wallet={wallet}
           walletAddress={walletAddress}
+          address={address}
+          network={network}
           connected={connected}
           onToast={showToast}
           onRefresh={refresh}

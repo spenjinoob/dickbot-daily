@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getContract, JSONRpcProvider } from 'opnet';
-import { Address } from '@btc-vision/transaction';
+import type { Address } from '@btc-vision/transaction';
 import { CONTRACT_ADDRESS, RPC_URL, NETWORK } from '../config';
 import { KingDickAbi } from '../abi/KingDickAbi';
 import type { IKingDick, GameState, MyTickets } from '../types';
@@ -10,7 +10,7 @@ const ZERO_ADDR = '0x' + '0'.repeat(64);
 const DEMO_STATE: GameState = {
   cycleId: 1,
   totalTickets: 50,
-  totalPot: 250000000000n,
+  totalPot: 2500000000000000000000n,
   snapshotBlock: 842235,
   currentBlock: 842100,
   kingAddress: ZERO_ADDR,
@@ -18,9 +18,10 @@ const DEMO_STATE: GameState = {
   lastWinner: ZERO_ADDR,
   lastPot: 0n,
   settled: false,
+  purchaseCount: 0,
 };
 
-export function useGameState(walletAddress: string | null) {
+export function useGameState(walletAddress: string | null, address: Address | null) {
   const [gameState, setGameState] = useState<GameState>(DEMO_STATE);
   const [myTickets, setMyTickets] = useState<MyTickets>({ ticketsThisCycle: 0, rolloverTickets: 0 });
   const [loading, setLoading] = useState(false);
@@ -28,7 +29,7 @@ export function useGameState(walletAddress: string | null) {
 
   const getProvider = useCallback(() => {
     if (!providerRef.current) {
-      providerRef.current = new JSONRpcProvider(RPC_URL, NETWORK);
+      providerRef.current = new JSONRpcProvider({ url: RPC_URL, network: NETWORK });
     }
     return providerRef.current;
   }, []);
@@ -59,10 +60,11 @@ export function useGameState(walletAddress: string | null) {
         lastWinner: p.lastWinner?.toString() ?? ZERO_ADDR,
         lastPot: p.lastPot,
         settled: p.settled,
+        purchaseCount: Number(p.purchaseCount),
       });
 
-      if (walletAddress) {
-        const ticketResult = await contract.getMyTickets(Address.fromString(walletAddress));
+      if (address) {
+        const ticketResult = await contract.getMyTickets(address);
         if (!('error' in ticketResult)) {
           setMyTickets({
             ticketsThisCycle: Number(ticketResult.properties.ticketsThisCycle),
@@ -75,7 +77,7 @@ export function useGameState(walletAddress: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [walletAddress, getProvider]);
+  }, [address, getProvider]);
 
   // Poll every 10 seconds when wallet is connected
   useEffect(() => {

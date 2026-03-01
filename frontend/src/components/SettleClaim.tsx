@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { getContract, JSONRpcProvider } from 'opnet';
-import { Address } from '@btc-vision/transaction';
+import type { Address } from '@btc-vision/transaction';
+import type { Network } from '@btc-vision/bitcoin';
 import { CONTRACT_ADDRESS, RPC_URL, NETWORK } from '../config';
 import { KingDickAbi } from '../abi/KingDickAbi';
 import { shortAddr } from '../utils/format';
-import type { IKingDick, GameState } from '../types';
+import type { IKingDick, GameState, Settle } from '../types';
 import type { ToastType } from './Toast';
 
 interface SettleClaimProps {
   gameState: GameState;
-  wallet: unknown;
   walletAddress: string | null;
+  address: Address | null;
+  network: Network | null;
   connected: boolean;
   onToast: (msg: string, type: ToastType) => void;
   onRefresh: () => void;
@@ -18,31 +20,35 @@ interface SettleClaimProps {
 
 export function SettleClaim({
   gameState,
-  wallet,
   walletAddress,
+  address,
+  network,
   connected,
   onToast,
   onRefresh,
 }: SettleClaimProps) {
   const [settling, setSettling] = useState(false);
+  const [settleStep, setSettleStep] = useState('');
 
   const blocksLeft = Math.max(0, gameState.snapshotBlock - gameState.currentBlock);
-  const canSettle = connected && blocksLeft === 0 && !gameState.settled;
+  const canSettle = connected && blocksLeft === 0 && !gameState.settled && gameState.totalTickets > 0;
 
   let countdownText = '';
   let countdownColor = 'var(--dim)';
 
-  if (gameState.settled) {
+  if (gameState.totalTickets === 0) {
+    countdownText = 'No tickets purchased yet — buy some first!';
+  } else if (gameState.settled) {
     countdownText = 'Cycle settled. Next round starting...';
   } else if (blocksLeft === 0) {
-    countdownText = '🟢 Settlement available now!';
+    countdownText = 'Settlement available now!';
     countdownColor = 'var(--green)';
   } else {
     countdownText = `Settlement available in: ${blocksLeft} block${blocksLeft === 1 ? '' : 's'}`;
   }
 
   async function handleSettle() {
-    if (!wallet || !walletAddress) {
+    if (!walletAddress || !address || !network) {
       onToast('Connect wallet first', 'error');
       return;
     }
@@ -54,56 +60,55 @@ export function SettleClaim({
     setSettling(true);
 
     try {
-      // Get block hash from RPC to compute winning ticket
-      const hashRes = await fetch(RPC_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'getBlockByNumber',
-          params: [gameState.snapshotBlock],
-          id: 1,
-        }),
-      });
-      const hashData = await hashRes.json();
-      const blockHash = hashData?.result?.hash;
-      if (!blockHash) throw new Error('Could not fetch snapshot block hash');
-
-      // Compute winning ticket index: hashMod(blockHash[0:8], totalTickets)
-      const hexStr = blockHash.replace('0x', '');
-      const bytes: number[] = [];
-      for (let i = 0; i < hexStr.length && bytes.length < 8; i += 2) {
-        bytes.push(parseInt(hexStr.slice(i, i + 2), 16));
-      }
-      let val = BigInt(0);
-      for (let i = 0; i < 8; i++) {
-        val = val * BigInt(256) + BigInt(bytes[i]);
-      }
-      const winningIndex = val % BigInt(gameState.totalTickets);
-
-      // Settle via opnet SDK
-      const provider = new JSONRpcProvider(RPC_URL, NETWORK);
-      const sender = Address.fromString(walletAddress);
+      const provider = new JSONRpcProvider({ url: RPC_URL, network: NETWORK });
       const contract = getContract<IKingDick>(
-        CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK, sender
+        CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK, address
       );
 
-      // For now, claim ourselves as winner (simplified — in prod, scan events to find actual winner)
-      const settleSim = await contract.settle(sender, winningIndex);
-      if ('error' in settleSim) throw new Error(String(settleSim.error));
+      const purchaseCount = gameState.purchaseCount;
+      if (purchaseCount === 0) {
+        onToast('No purchases to settle', 'error');
+        setSettling(false);
+        return;
+      }
 
-      const tx = await (wallet as any).sendTransaction({
-        ...settleSim,
+      // Find the correct purchase index by simulating each one.
+      // The contract verifies the winning ticket falls within the purchase range.
+      setSettleStep(`Searching entries (0/${purchaseCount})...`);
+      let winnerSim: Settle | null = null;
+
+      for (let i = 0; i < purchaseCount; i++) {
+        setSettleStep(`Searching entries (${i + 1}/${purchaseCount})...`);
+        const sim = await contract.settle(BigInt(i));
+        if (!('error' in sim)) {
+          winnerSim = sim;
+          break;
+        }
+      }
+
+      if (!winnerSim) {
+        throw new Error('Could not find winning purchase index');
+      }
+
+      // Send the valid settlement transaction
+      setSettleStep('Sending transaction...');
+      const txReceipt = await winnerSim.sendTransaction({
         signer: null,
         mldsaSigner: null,
+        refundTo: walletAddress,
+        maximumAllowedSatToSpend: 100_000n,
+        network,
       });
 
-      onToast(`🏆 Winner revealed! TX: ${shortAddr(tx.hash)}`, 'success');
+      const txId = txReceipt?.transactionId ?? '';
+      onToast(`Winner revealed! TX: ${shortAddr(txId)}`, 'success');
       setTimeout(onRefresh, 3000);
-    } catch (e: any) {
-      onToast('Settle failed: ' + (e.message || e), 'error');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      onToast('Settle failed: ' + msg, 'error');
     } finally {
       setSettling(false);
+      setSettleStep('');
     }
   }
 
@@ -140,10 +145,10 @@ export function SettleClaim({
         {settling ? (
           <>
             <span className="spinner" />
-            Computing winner...
+            {settleStep || 'Computing winner...'}
           </>
         ) : (
-          '⚡ REVEAL TODAY\'S MASSIVE WINNER & CLAIM YOUR FEE'
+          "REVEAL TODAY'S MASSIVE WINNER & CLAIM YOUR FEE"
         )}
       </button>
     </div>
