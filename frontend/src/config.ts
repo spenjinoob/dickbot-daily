@@ -1,9 +1,9 @@
 import { networks } from '@btc-vision/bitcoin';
 
-export const CONTRACT_ADDRESS = 'opt1sqrfg39a853s4pgldj2guzl0gzzw5a269psl07d9c';
+export const CONTRACT_ADDRESS = 'opt1sqpdsfg3zvjl42u67yhn3g06tx78ka5neagv9e78d';
 export const RPC_URL = 'https://testnet.opnet.org';
 export const MOTO_ADDRESS = 'opt1sqzkx6wm5acawl9m6nay2mjsm6wagv7gazcgtczds';
 export const TICKET_PRICE_MOTO = 50;
 export const DECIMALS = 18;
 export const NETWORK = networks.opnetTestnet;
-export const SNAPSHOT_OFFSET = 5;
+export const SNAPSHOT_OFFSET = 135;

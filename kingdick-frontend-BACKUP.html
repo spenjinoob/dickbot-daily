@@ -775,11 +775,11 @@ body::after {
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-const CONTRACT_ADDRESS = '66fb775b971f14c7dba6a9768835e3588cb36aaa2024364e8300378673cd7a89';
+const CONTRACT_ADDRESS = 'opt1sqpx4rnxv0tmad38gpv70l8hv75vmyvtezg054jka';
 const RPC_URL = 'https://testnet.opnet.org';
-const MOTO_ADDRESS = 'deaadb456302ab508380ac39b023aaae5eede0eeee221ae970d5c92f69d3ac24';
+const MOTO_ADDRESS = 'opt1sqzkx6wm5acawl9m6nay2mjsm6wagv7gazcgtczds';
 const TICKET_PRICE_MOTO = 50;
-const DECIMALS = 8;
+const DECIMALS = 18;
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let wallet = null;
@@ -867,7 +867,7 @@ async function buyTickets() {
 
   try {
     // First approve MOTO spend
-    const totalMoto = BigInt(count) * BigInt(5000000000);
+    const totalMoto = BigInt(count) * 50000000000000000000n;
     const approveData = encodeSelector('increaseAllowance(address,uint256)')
       + CONTRACT_ADDRESS.replace('0x','').padStart(64,'0')
       + totalMoto.toString(16).padStart(64,'0');
@@ -1108,7 +1108,7 @@ function decodeState(hex) {
 function formatMoto(raw) {
   if (!raw && raw !== 0n) return '0';
   const n = typeof raw === 'bigint' ? raw : BigInt(raw);
-  return (Number(n) / 1e8).toLocaleString(undefined, {maximumFractionDigits: 2});
+  return (Number(n) / 1e18).toLocaleString(undefined, {maximumFractionDigits: 2});
 }
 
 function shortAddr(addr) {

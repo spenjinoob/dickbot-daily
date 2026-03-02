@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { getContract, JSONRpcProvider } from 'opnet';
 import type { Address } from '@btc-vision/transaction';
 import type { Network } from '@btc-vision/bitcoin';
-import { CONTRACT_ADDRESS, RPC_URL, NETWORK } from '../config';
+import { CONTRACT_ADDRESS, NETWORK } from '../config';
 import { KingDickAbi } from '../abi/KingDickAbi';
 import { shortAddr } from '../utils/format';
-import type { IKingDick, GameState, Settle } from '../types';
+import type { IKingDick, GameState, RevealSettle } from '../types';
 import type { ToastType } from './Toast';
 
 interface SettleClaimProps {
@@ -16,6 +16,7 @@ interface SettleClaimProps {
   connected: boolean;
   onToast: (msg: string, type: ToastType) => void;
   onRefresh: () => void;
+  getProvider: () => JSONRpcProvider;
 }
 
 export function SettleClaim({
@@ -26,25 +27,33 @@ export function SettleClaim({
   connected,
   onToast,
   onRefresh,
+  getProvider,
 }: SettleClaimProps) {
   const [settling, setSettling] = useState(false);
   const [settleStep, setSettleStep] = useState('');
 
-  const blocksLeft = Math.max(0, gameState.snapshotBlock - gameState.currentBlock);
-  const canSettle = connected && blocksLeft === 0 && !gameState.settled && gameState.totalTickets > 0;
+  const blocksLeft = gameState.snapshotBlock > gameState.currentBlock
+    ? Number(gameState.snapshotBlock - gameState.currentBlock)
+    : 0;
+  const hasCommit = gameState.commitBlock > 0n;
+  const canCommit = connected && blocksLeft === 0 && !gameState.settled && gameState.totalTickets > 0n && !hasCommit;
+  const canSettle = canCommit || hasCommit;
 
   let countdownText = '';
   let countdownColor = 'var(--dim)';
 
-  if (gameState.totalTickets === 0) {
+  if (gameState.totalTickets === 0n) {
     countdownText = 'No tickets purchased yet — buy some first!';
   } else if (gameState.settled) {
     countdownText = 'Cycle settled. Next round starting...';
+  } else if (hasCommit) {
+    countdownText = 'Commit received — waiting for reveal window...';
+    countdownColor = 'var(--cyan)';
   } else if (blocksLeft === 0) {
     countdownText = 'Settlement available now!';
     countdownColor = 'var(--green)';
   } else {
-    countdownText = `Settlement available in: ${blocksLeft} block${blocksLeft === 1 ? '' : 's'}`;
+    countdownText = `Settlement in: ${blocksLeft} block${blocksLeft === 1 ? '' : 's'}`;
   }
 
   async function handleSettle() {
@@ -60,26 +69,68 @@ export function SettleClaim({
     setSettling(true);
 
     try {
-      const provider = new JSONRpcProvider({ url: RPC_URL, network: NETWORK });
+      const provider = getProvider();
       const contract = getContract<IKingDick>(
         CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK, address
       );
 
-      const purchaseCount = gameState.purchaseCount;
+      const purchaseCount = Number(gameState.purchaseCount);
       if (purchaseCount === 0) {
         onToast('No purchases to settle', 'error');
         setSettling(false);
         return;
       }
 
-      // Find the correct purchase index by simulating each one.
-      // The contract verifies the winning ticket falls within the purchase range.
+      // Phase 1: Generate secret and commit
+      setSettleStep('Generating commitment...');
+      const secretBytes = new Uint8Array(32);
+      crypto.getRandomValues(secretBytes);
+      const secret = BigInt('0x' + Array.from(secretBytes).map(
+        (b) => b.toString(16).padStart(2, '0')
+      ).join(''));
+
+      // Compute sha256(secret) for the commitment
+      const hashBuffer = await crypto.subtle.digest('SHA-256', secretBytes);
+      const hashArray = new Uint8Array(hashBuffer);
+      const commitHash = BigInt('0x' + Array.from(hashArray).map(
+        (b) => b.toString(16).padStart(2, '0')
+      ).join(''));
+
+      setSettleStep('Sending commitment...');
+      const commitSim = await contract.commitSettle(commitHash);
+      if ('error' in commitSim) throw new Error(String(commitSim.error));
+
+      await commitSim.sendTransaction({
+        signer: null,
+        mldsaSigner: null,
+        refundTo: walletAddress,
+        maximumAllowedSatToSpend: 100_000n,
+        network,
+      });
+
+      // Phase 2: Wait for next block then reveal
+      setSettleStep('Waiting for next block...');
+      for (let attempt = 0; attempt < 60; attempt++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const freshState = await contract.getState();
+        if (!('error' in freshState) && freshState.properties.commitBlock > 0n) {
+          const commitBlk = freshState.properties.commitBlock;
+          const curBlk = freshState.properties.currentBlock;
+          if (curBlk > commitBlk) {
+            // We're in a later block — reveal now
+            break;
+          }
+        }
+        setSettleStep(`Waiting for next block (${attempt + 1})...`);
+      }
+
+      // Phase 2b: Find winning purchase index
       setSettleStep(`Searching entries (0/${purchaseCount})...`);
-      let winnerSim: Settle | null = null;
+      let winnerSim: RevealSettle | null = null;
 
       for (let i = 0; i < purchaseCount; i++) {
         setSettleStep(`Searching entries (${i + 1}/${purchaseCount})...`);
-        const sim = await contract.settle(BigInt(i));
+        const sim = await contract.revealSettle(secret, BigInt(i));
         if (!('error' in sim)) {
           winnerSim = sim;
           break;
@@ -90,8 +141,7 @@ export function SettleClaim({
         throw new Error('Could not find winning purchase index');
       }
 
-      // Send the valid settlement transaction
-      setSettleStep('Sending transaction...');
+      setSettleStep('Revealing winner...');
       const txReceipt = await winnerSim.sendTransaction({
         signer: null,
         mldsaSigner: null,
@@ -117,8 +167,8 @@ export function SettleClaim({
       <div className="panel-title">Settle &amp; Claim</div>
       <p style={{ fontSize: 11, color: 'var(--dim)', marginBottom: 14, lineHeight: 1.6 }}>
         Anyone can settle a completed cycle and earn{' '}
-        <span style={{ color: 'var(--gold)' }}>0.2%</span> of the pot. No admin required — fully
-        trustless.
+        <span style={{ color: 'var(--gold)' }}>0.2%</span> of the pot. Uses commit-reveal
+        for provably fair winner selection.
       </p>
       <div
         style={{

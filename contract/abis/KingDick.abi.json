@@ -13,17 +13,39 @@
             ],
             "outputs": [
                 {
-                    "name": "tickets",
+                    "name": "ticketsThisCycle",
                     "type": "UINT256"
                 }
             ]
         },
         {
-            "name": "settle",
+            "name": "commitSettle",
             "type": "Function",
             "payable": false,
             "onlyOwner": false,
             "inputs": [
+                {
+                    "name": "commitHash",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "commitBlock",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "revealSettle",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "secret",
+                    "type": "UINT256"
+                },
                 {
                     "name": "purchaseIndex",
                     "type": "UINT256"
@@ -44,8 +66,52 @@
             "inputs": [],
             "outputs": [
                 {
-                    "name": "state",
-                    "type": "BYTES32"
+                    "name": "cycleId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalTickets",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalPot",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "snapshotBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "currentBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "kingAddress",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "kingStreak",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "lastWinner",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "lastPot",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "settled",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "purchaseCount",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "commitBlock",
+                    "type": "UINT256"
                 }
             ]
         },

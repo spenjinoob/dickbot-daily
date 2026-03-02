@@ -22,7 +22,7 @@ function App() {
   } = useWalletConnect();
 
   const connected = !!walletAddress;
-  const { gameState, myTickets, refresh } = useGameState(walletAddress, address);
+  const { gameState, myTickets, refresh, getProvider } = useGameState(walletAddress, address);
   const { toast, showToast } = useToast();
 
   return (
@@ -52,6 +52,7 @@ function App() {
           connected={connected}
           onToast={showToast}
           onRefresh={refresh}
+          getProvider={getProvider}
         />
 
         <PrizeSplit gameState={gameState} />
@@ -64,6 +65,7 @@ function App() {
           connected={connected}
           onToast={showToast}
           onRefresh={refresh}
+          getProvider={getProvider}
         />
 
         <HowItWorks />

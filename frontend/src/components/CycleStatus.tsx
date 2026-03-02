@@ -7,7 +7,9 @@ interface CycleStatusProps {
 }
 
 export function CycleStatus({ gameState }: CycleStatusProps) {
-  const blocksLeft = Math.max(0, gameState.snapshotBlock - gameState.currentBlock);
+  const blocksLeft = gameState.snapshotBlock > gameState.currentBlock
+    ? Number(gameState.snapshotBlock - gameState.currentBlock)
+    : 0;
   const pct = Math.min(100, Math.round((1 - blocksLeft / SNAPSHOT_OFFSET) * 100));
 
   let badgeClass = 'phase-badge open';
@@ -33,7 +35,7 @@ export function CycleStatus({ gameState }: CycleStatusProps) {
       <div className="stats-grid">
         <div className="stat">
           <div className="stat-label">Cycle</div>
-          <div className="stat-value pink">#{gameState.cycleId}</div>
+          <div className="stat-value pink">#{String(gameState.cycleId)}</div>
         </div>
         <div className="stat">
           <div className="stat-label">Total Pot</div>
@@ -41,15 +43,15 @@ export function CycleStatus({ gameState }: CycleStatusProps) {
         </div>
         <div className="stat">
           <div className="stat-label">Tickets Sold</div>
-          <div className="stat-value">{gameState.totalTickets}</div>
+          <div className="stat-value">{String(gameState.totalTickets)}</div>
         </div>
         <div className="stat">
           <div className="stat-label">Block</div>
-          <div className="stat-value">{gameState.currentBlock.toLocaleString()}</div>
+          <div className="stat-value">{Number(gameState.currentBlock).toLocaleString()}</div>
         </div>
         <div className="stat">
           <div className="stat-label">Snapshot</div>
-          <div className="stat-value">{gameState.snapshotBlock.toLocaleString()}</div>
+          <div className="stat-value">{Number(gameState.snapshotBlock).toLocaleString()}</div>
         </div>
         <div className="stat">
           <div className="stat-label">Blocks Left</div>

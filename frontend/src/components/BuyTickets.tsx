@@ -3,7 +3,7 @@ import { getContract, JSONRpcProvider, OP_20_ABI } from 'opnet';
 import type { IOP20Contract } from 'opnet';
 import type { Address } from '@btc-vision/transaction';
 import type { Network } from '@btc-vision/bitcoin';
-import { CONTRACT_ADDRESS, MOTO_ADDRESS, TICKET_PRICE_MOTO, RPC_URL, NETWORK } from '../config';
+import { CONTRACT_ADDRESS, MOTO_ADDRESS, TICKET_PRICE_MOTO, NETWORK } from '../config';
 import { KingDickAbi } from '../abi/KingDickAbi';
 import { shortAddr } from '../utils/format';
 import type { IKingDick, GameState, MyTickets } from '../types';
@@ -18,6 +18,7 @@ interface BuyTicketsProps {
   connected: boolean;
   onToast: (msg: string, type: ToastType) => void;
   onRefresh: () => void;
+  getProvider: () => JSONRpcProvider;
 }
 
 export function BuyTickets({
@@ -29,6 +30,7 @@ export function BuyTickets({
   connected,
   onToast,
   onRefresh,
+  getProvider,
 }: BuyTicketsProps) {
   const [count, setCount] = useState(1);
   const [buying, setBuying] = useState(false);
@@ -37,8 +39,8 @@ export function BuyTickets({
   const cost = count * TICKET_PRICE_MOTO;
 
   const odds = useMemo(() => {
-    const total = gameState.totalTickets;
-    const combined = myTickets.ticketsThisCycle + count;
+    const total = Number(gameState.totalTickets);
+    const combined = Number(myTickets.ticketsThisCycle) + count;
     if (total <= 0) return '—';
     const pct = (combined / (total + count)) * 100;
     return pct < 1 ? pct.toFixed(2) + '%' : pct.toFixed(1) + '%';
@@ -62,7 +64,7 @@ export function BuyTickets({
     setBuyStep('Approving...');
 
     try {
-      const provider = new JSONRpcProvider({ url: RPC_URL, network: NETWORK });
+      const provider = getProvider();
       const totalCost = BigInt(count) * 50000000000000000000n;
 
       // 1. Approve MOTO spend
@@ -81,32 +83,44 @@ export function BuyTickets({
         network,
       });
 
-      // Wait for approval to confirm on-chain
-      setBuyStep('Waiting for approval...');
+      // Wait for approval to confirm on-chain (Signet blocks can take 3-10 min)
+      setBuyStep('Waiting for approval to confirm...');
       const contract = getContract<IKingDick>(
         CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK, address
       );
-      for (let attempt = 0; attempt < 30; attempt++) {
-        await new Promise((r) => setTimeout(r, 3000));
-        const buySim = await contract.buyTickets(BigInt(count));
-        if (!('error' in buySim)) {
-          // 2. Buy tickets — approval confirmed
-          setBuyStep('Buying...');
-          const txReceipt2 = await buySim.sendTransaction({
-            signer: null,
-            mldsaSigner: null,
-            refundTo: walletAddress,
-            maximumAllowedSatToSpend: 100_000n,
-            network,
-          });
-          const txId = txReceipt2?.transactionId ?? '';
-          onToast(`Tickets purchased! TX: ${shortAddr(txId)}`, 'success');
-          setTimeout(onRefresh, 3000);
-          return;
+      let buySim = null;
+      for (let attempt = 0; attempt < 120; attempt++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        try {
+          const sim = await contract.buyTickets(BigInt(count));
+          if (!('error' in sim)) {
+            buySim = sim;
+            break;
+          }
+        } catch (_) {
+          // Allowance not yet confirmed — keep polling
         }
-        setBuyStep(`Waiting for approval (${attempt + 1})...`);
+        const mins = Math.floor(((attempt + 1) * 5) / 60);
+        const secs = ((attempt + 1) * 5) % 60;
+        setBuyStep(`Waiting for approval (${mins}:${String(secs).padStart(2, '0')})...`);
       }
-      throw new Error('Approval not confirmed after 90s — try again');
+
+      if (!buySim) {
+        throw new Error('Approval not confirmed after 10 min — try buying again (approval may still be pending)');
+      }
+
+      // 2. Buy tickets — approval confirmed
+      setBuyStep('Buying tickets...');
+      const txReceipt2 = await buySim.sendTransaction({
+        signer: null,
+        mldsaSigner: null,
+        refundTo: walletAddress,
+        maximumAllowedSatToSpend: 100_000n,
+        network,
+      });
+      const txId = txReceipt2?.transactionId ?? '';
+      onToast(`Tickets purchased! TX: ${shortAddr(txId)}`, 'success');
+      setTimeout(onRefresh, 3000);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       onToast('Transaction failed: ' + msg, 'error');
@@ -156,14 +170,8 @@ export function BuyTickets({
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <div className="ticket-display" style={{ flex: 1, minWidth: 120 }}>
-          <div className="ticket-number">{myTickets.ticketsThisCycle}</div>
+          <div className="ticket-number">{Number(myTickets.ticketsThisCycle)}</div>
           <div className="ticket-sub">my tickets this cycle</div>
-        </div>
-        <div className="ticket-display" style={{ flex: 1, minWidth: 120 }}>
-          <div className="ticket-number" style={{ color: 'var(--purple)' }}>
-            {myTickets.rolloverTickets}
-          </div>
-          <div className="ticket-sub">rollover tickets</div>
         </div>
         <div className="ticket-display" style={{ flex: 1, minWidth: 120 }}>
           <div className="ticket-number" style={{ color: 'var(--gold)' }}>{odds}</div>

@@ -4,12 +4,12 @@ import { getContract, JSONRpcProvider, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes,
 import fs from 'fs';
 
 // Load test wallets
-const wallets = JSON.parse(fs.readFileSync('../motocatroulette1.1/.test-wallets.json', 'utf-8'));
+const wallets = JSON.parse(fs.readFileSync('/home/vibecode/motocatroulette1.1/.test-wallets.json', 'utf-8'));
 const wallet0 = wallets[0];
 
 const network = networks.opnetTestnet;
 const rpcUrl = 'https://testnet.opnet.org';
-const CONTRACT = 'opt1sqz52ykz8mzmxn8x0a4naf44uztdys2y4m5dzdeh2';
+const CONTRACT = 'opt1sqpdsfg3zvjl42u67yhn3g06tx78ka5neagv9e78d';
 const MOTO_ADDRESS = 'opt1sqzkx6wm5acawl9m6nay2mjsm6wagv7gazcgtczds';
 
 const KingDickAbi = [
@@ -48,7 +48,6 @@ const KingDickAbi = [
         inputs: [{ name: 'wallet', type: ABIDataTypes.ADDRESS }],
         outputs: [
             { name: 'ticketsThisCycle', type: ABIDataTypes.UINT256 },
-            { name: 'rolloverTickets', type: ABIDataTypes.UINT256 },
         ],
         type: BitcoinAbiTypes.Function,
     },
@@ -140,7 +139,6 @@ try {
         console.log('  getMyTickets error:', ticketResult.error);
     } else {
         console.log('  Tickets this cycle:', ticketResult.properties.ticketsThisCycle.toString());
-        console.log('  Rollover tickets:', ticketResult.properties.rolloverTickets.toString());
     }
 } catch (e) {
     console.log('  getMyTickets failed:', e.message?.slice(0, 300));

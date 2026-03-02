@@ -26,15 +26,25 @@ export type CycleSettledEvent = {
  */
 export type BuyTickets = CallResult<
     {
-        tickets: bigint;
+        ticketsThisCycle: bigint;
     },
     OPNetEvent<TicketsPurchasedEvent>[]
 >;
 
 /**
- * @description Represents the result of the settle function call.
+ * @description Represents the result of the commitSettle function call.
  */
-export type Settle = CallResult<
+export type CommitSettle = CallResult<
+    {
+        commitBlock: bigint;
+    },
+    OPNetEvent<never>[]
+>;
+
+/**
+ * @description Represents the result of the revealSettle function call.
+ */
+export type RevealSettle = CallResult<
     {
         winner: Address;
     },
@@ -46,7 +56,18 @@ export type Settle = CallResult<
  */
 export type GetState = CallResult<
     {
-        state: Uint8Array;
+        cycleId: bigint;
+        totalTickets: bigint;
+        totalPot: bigint;
+        snapshotBlock: bigint;
+        currentBlock: bigint;
+        kingAddress: Address;
+        kingStreak: bigint;
+        lastWinner: Address;
+        lastPot: bigint;
+        settled: boolean;
+        purchaseCount: bigint;
+        commitBlock: bigint;
     },
     OPNetEvent<never>[]
 >;
@@ -66,7 +87,8 @@ export type GetMyTickets = CallResult<
 // ------------------------------------------------------------------
 export interface IKingDick extends IOP_NETContract {
     buyTickets(count: bigint): Promise<BuyTickets>;
-    settle(purchaseIndex: bigint): Promise<Settle>;
+    commitSettle(commitHash: bigint): Promise<CommitSettle>;
+    revealSettle(secret: bigint, purchaseIndex: bigint): Promise<RevealSettle>;
     getState(): Promise<GetState>;
     getMyTickets(wallet: Address): Promise<GetMyTickets>;
 }

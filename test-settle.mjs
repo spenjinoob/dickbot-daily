@@ -3,7 +3,7 @@ import { getContract, JSONRpcProvider, ABIDataTypes, BitcoinAbiTypes, OP_NET_ABI
 
 const network = networks.opnetTestnet;
 const provider = new JSONRpcProvider({ url: 'https://testnet.opnet.org', network });
-const CONTRACT = 'opt1sqz52ykz8mzmxn8x0a4naf44uztdys2y4m5dzdeh2';
+const CONTRACT = 'opt1sqpdsfg3zvjl42u67yhn3g06tx78ka5neagv9e78d';
 
 const KingDickAbi = [
     { name: 'settle', inputs: [{ name: 'purchaseIndex', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'winner', type: ABIDataTypes.ADDRESS }], type: BitcoinAbiTypes.Function },

@@ -25,7 +25,7 @@ export function CurrentKing({ gameState }: CurrentKingProps) {
           </div>
         </div>
         {hasKing && (
-          <div className="king-streak">🔥 {gameState.kingStreak}x</div>
+          <div className="king-streak">🔥 {String(gameState.kingStreak)}x</div>
         )}
       </div>
       <div style={{ marginTop: 12, display: 'flex', gap: 12, flexWrap: 'wrap' }}>

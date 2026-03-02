@@ -8,22 +8,23 @@ import type { IKingDick, GameState, MyTickets } from '../types';
 const ZERO_ADDR = '0x' + '0'.repeat(64);
 
 const DEMO_STATE: GameState = {
-  cycleId: 1,
-  totalTickets: 50,
-  totalPot: 2500000000000000000000n,
-  snapshotBlock: 842235,
-  currentBlock: 842100,
+  cycleId: 0n,
+  totalTickets: 0n,
+  totalPot: 0n,
+  snapshotBlock: 0n,
+  currentBlock: 0n,
   kingAddress: ZERO_ADDR,
-  kingStreak: 0,
+  kingStreak: 0n,
   lastWinner: ZERO_ADDR,
   lastPot: 0n,
   settled: false,
-  purchaseCount: 0,
+  purchaseCount: 0n,
+  commitBlock: 0n,
 };
 
 export function useGameState(walletAddress: string | null, address: Address | null) {
   const [gameState, setGameState] = useState<GameState>(DEMO_STATE);
-  const [myTickets, setMyTickets] = useState<MyTickets>({ ticketsThisCycle: 0, rolloverTickets: 0 });
+  const [myTickets, setMyTickets] = useState<MyTickets>({ ticketsThisCycle: 0n });
   const [loading, setLoading] = useState(false);
   const providerRef = useRef<JSONRpcProvider | null>(null);
 
@@ -50,25 +51,25 @@ export function useGameState(walletAddress: string | null, address: Address | nu
 
       const p = stateResult.properties;
       setGameState({
-        cycleId: Number(p.cycleId),
-        totalTickets: Number(p.totalTickets),
+        cycleId: p.cycleId,
+        totalTickets: p.totalTickets,
         totalPot: p.totalPot,
-        snapshotBlock: Number(p.snapshotBlock),
-        currentBlock: Number(p.currentBlock),
+        snapshotBlock: p.snapshotBlock,
+        currentBlock: p.currentBlock,
         kingAddress: p.kingAddress?.toString() ?? ZERO_ADDR,
-        kingStreak: Number(p.kingStreak),
+        kingStreak: p.kingStreak,
         lastWinner: p.lastWinner?.toString() ?? ZERO_ADDR,
         lastPot: p.lastPot,
         settled: p.settled,
-        purchaseCount: Number(p.purchaseCount),
+        purchaseCount: p.purchaseCount,
+        commitBlock: p.commitBlock,
       });
 
       if (address) {
         const ticketResult = await contract.getMyTickets(address);
         if (!('error' in ticketResult)) {
           setMyTickets({
-            ticketsThisCycle: Number(ticketResult.properties.ticketsThisCycle),
-            rolloverTickets: Number(ticketResult.properties.rolloverTickets),
+            ticketsThisCycle: ticketResult.properties.ticketsThisCycle,
           });
         }
       }
@@ -88,5 +89,5 @@ export function useGameState(walletAddress: string | null, address: Address | nu
     return () => clearInterval(interval);
   }, [walletAddress, refresh]);
 
-  return { gameState, myTickets, loading, refresh };
+  return { gameState, myTickets, loading, refresh, getProvider };
 }
