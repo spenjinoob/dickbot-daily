@@ -72,7 +72,9 @@ function App() {
       </div>
 
       <Toast toast={toast} />
-      <Footer />
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <Footer />
+      </div>
     </>
   );
 }

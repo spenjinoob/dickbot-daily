@@ -9,7 +9,7 @@ export function Footer() {
         gap: 12,
         flexWrap: 'wrap',
       }}>
-        <SocialLink href="https://t.me/" icon={<TelegramIcon />} label="TELEGRAM" />
+        <SocialLink href="https://t.me/DickBotDaily" icon={<TelegramIcon />} label="TELEGRAM" />
         <SocialLink href="https://x.com/" icon={<XIcon />} label="X.COM" />
         <SocialLink href="https://discord.gg/" icon={<DiscordIcon />} label="DISCORD" />
       </div>
