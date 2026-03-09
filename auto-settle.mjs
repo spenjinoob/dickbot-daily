@@ -14,7 +14,7 @@ const provider = new JSONRpcProvider({ url: 'https://testnet.opnet.org', network
 const mnemonic = new Mnemonic(SETTLER_MNEMONIC, '', network);
 const wallet = mnemonic.deriveOPWallet();
 
-const CONTRACT = 'opt1sqqnssdpgnmf7mmxmleeekatkclu0mw3cxg0zmjtg';
+const CONTRACT = 'opt1sqr2hdez73pyz3xepn4cgu2muj9zhqcnqwy6qf26m';
 const POLL_INTERVAL = 30000;
 const REVEAL_WINDOW = 10n;
 

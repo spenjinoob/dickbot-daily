@@ -395,11 +395,10 @@ export class KingDick extends OP_NET {
         return Address.fromUint8Array(b);
     }
 
-    // Staking: 831ca1f8 ebcc1925 be9aa3a2 2fd3c5c4 bf7d03a8 6c66c391 94fef698 acb886ae
+    // Staking + Dev share both go to dev wallet: opt1p47h427fs9t2d36j7yggdfg4crr5plwpw7ww5e7rh7rd2wjy73jnqh5jdg0
+    // Staking portion is tracked off-chain and periodically deposited into Motoswap staking
     private _staking(): Address {
-        const b = new Uint8Array(32);
-        b[0]=131;b[1]=28;b[2]=161;b[3]=248;b[4]=235;b[5]=204;b[6]=25;b[7]=37;b[8]=190;b[9]=154;b[10]=163;b[11]=162;b[12]=47;b[13]=211;b[14]=197;b[15]=196;b[16]=191;b[17]=125;b[18]=3;b[19]=168;b[20]=108;b[21]=102;b[22]=195;b[23]=145;b[24]=148;b[25]=254;b[26]=246;b[27]=152;b[28]=172;b[29]=184;b[30]=134;b[31]=174;
-        return Address.fromUint8Array(b);
+        return this._dev();
     }
 
     // Dev fee: opt1p47h427fs9t2d36j7yggdfg4crr5plwpw7ww5e7rh7rd2wjy73jnqh5jdg0

@@ -24,7 +24,7 @@ if (!BOT_TOKEN || !CHAT_ID) {
 }
 
 const network = networks.opnetTestnet;
-const CONTRACT = 'opt1sqqnssdpgnmf7mmxmleeekatkclu0mw3cxg0zmjtg';
+const CONTRACT = 'opt1sqr2hdez73pyz3xepn4cgu2muj9zhqcnqwy6qf26m';
 const SNAPSHOT_OFFSET = 135;
 const POLL_INTERVAL = 30_000;
 const COUNTDOWN_INTERVAL = 10;
