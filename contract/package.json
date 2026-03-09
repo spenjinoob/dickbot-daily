@@ -2,7 +2,9 @@
   "name": "kingdick-contract",
   "version": "1.0.0",
   "scripts": {
-    "build": "asc src/index.ts --config asconfig.json --target release"
+    "build": "asc src/index.ts --config asconfig.json --target release",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
   },
   "dependencies": {
     "@assemblyscript/loader": "^0.28.9",

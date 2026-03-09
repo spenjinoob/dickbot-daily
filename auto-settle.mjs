@@ -14,9 +14,9 @@ const provider = new JSONRpcProvider({ url: 'https://testnet.opnet.org', network
 const mnemonic = new Mnemonic(SETTLER_MNEMONIC, '', network);
 const wallet = mnemonic.deriveOPWallet();
 
-const CONTRACT = 'opt1sqpdsfg3zvjl42u67yhn3g06tx78ka5neagv9e78d';
+const CONTRACT = 'opt1sqqnssdpgnmf7mmxmleeekatkclu0mw3cxg0zmjtg';
 const POLL_INTERVAL = 30000;
-const REVEAL_WINDOW = 10;
+const REVEAL_WINDOW = 10n;
 
 const KingDickAbi = [
     { name: 'commitSettle', inputs: [{ name: 'commitHash', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'commitBlock', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
@@ -37,7 +37,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function getState() {
     const contract = getContract(CONTRACT, KingDickAbi, provider, network);
     const s = await contract.getState();
-    if ('error' in s) throw new Error(s.error);
     return s.properties;
 }
 
@@ -55,8 +54,8 @@ async function commitAndReveal(purchaseCount) {
     const hashBytes = crypto.createHash('sha256').update(secretBytes).digest();
     const commitHash = BigInt('0x' + hashBytes.toString('hex'));
 
+    // opnet library throws on simulation errors — no need for 'error' in check
     const commitSim = await contract.commitSettle(commitHash);
-    if ('error' in commitSim) throw new Error('Commit sim failed: ' + commitSim.error);
 
     const utxos = await getUTXOs();
     const commitTx = await commitSim.sendTransaction({
@@ -65,44 +64,52 @@ async function commitAndReveal(purchaseCount) {
         refundTo: wallet.p2tr,
         utxos,
         maximumAllowedSatToSpend: 100_000n,
-        feeRate: 10,
+        feeRate: 50,
         network,
     });
     console.log(`  Commit TX: ${commitTx?.transactionId ?? 'unknown'}`);
 
-    // Phase 2: Wait for next block
+    // Phase 2: Wait for commit confirm + next block (up to 25 min for testnet)
     console.log('  Phase 2: Waiting for next block...');
-    for (let i = 0; i < 60; i++) {
+    let blockAdvanced = false;
+    for (let i = 0; i < 150; i++) {
         await sleep(10000);
-        const state = await getState();
-        if (state.commitBlock > 0n && state.currentBlock > state.commitBlock) {
-            console.log(`  Next block reached (commit: ${state.commitBlock}, current: ${state.currentBlock})`);
-            break;
+        try {
+            const state = await getState();
+            if (state.commitBlock > 0n && state.currentBlock > state.commitBlock) {
+                console.log(`  Next block reached (commit: ${state.commitBlock}, current: ${state.currentBlock})`);
+                blockAdvanced = true;
+                break;
+            }
+            if (state.commitBlock > 0n) {
+                console.log(`  Commit at block ${state.commitBlock}, waiting for next... (${i * 10}s)`);
+            }
+        } catch {
+            // State fetch failed, keep polling
         }
-        if (i === 59) throw new Error('Timed out waiting for next block after commit');
     }
+    if (!blockAdvanced) throw new Error('Timed out waiting for next block after commit');
 
     // Phase 3: Find winning index and reveal
     console.log(`  Phase 3: Searching ${purchaseCount} entries for winner...`);
     const contract2 = getContract(CONTRACT, KingDickAbi, provider, network, wallet.address);
     for (let i = 0; i < purchaseCount; i++) {
         try {
+            // opnet throws for wrong indices — catch and try next
             const sim = await contract2.revealSettle(secret, BigInt(i));
-            if (!('error' in sim)) {
-                console.log(`  Found winning entry at index ${i}!`);
-                console.log('  Sending reveal TX...');
-                const utxos2 = await getUTXOs();
-                const tx = await sim.sendTransaction({
-                    signer: wallet.keypair,
-                    mldsaSigner: wallet.mldsaKeypair,
-                    refundTo: wallet.p2tr,
-                    utxos: utxos2,
-                    maximumAllowedSatToSpend: 100_000n,
-                    feeRate: 10,
-                    network,
-                });
-                return tx?.transactionId ?? null;
-            }
+            console.log(`  Found winning entry at index ${i}!`);
+            console.log('  Sending reveal TX...');
+            const utxos2 = await getUTXOs();
+            const tx = await sim.sendTransaction({
+                signer: wallet.keypair,
+                mldsaSigner: wallet.mldsaKeypair,
+                refundTo: wallet.p2tr,
+                utxos: utxos2,
+                maximumAllowedSatToSpend: 100_000n,
+                feeRate: 50,
+                network,
+            });
+            return tx?.transactionId ?? null;
         } catch (_e) {
             // This index doesn't contain the winner, try next
         }
@@ -132,9 +139,12 @@ while (true) {
             console.log(`  ${blocksLeft} blocks until settlement available`);
         } else if (Number(state.totalTickets) === 0) {
             console.log('  No tickets to settle');
-        } else if (hasCommit) {
+        } else if (hasCommit && (state.currentBlock - state.commitBlock) <= REVEAL_WINDOW) {
             console.log('  Commit exists — someone else is settling or it will expire');
         } else {
+            if (hasCommit) {
+                console.log('  Expired commit detected — commitSettle will clear it');
+            }
             console.log('  >>> SETTLEMENT AVAILABLE! Starting commit-reveal...');
             const txId = await commitAndReveal(purchaseCount);
             if (txId) {

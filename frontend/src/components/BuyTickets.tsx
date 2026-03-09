@@ -61,61 +61,88 @@ export function BuyTickets({
     }
 
     setBuying(true);
-    setBuyStep('Approving...');
 
     try {
       const provider = getProvider();
       const totalCost = BigInt(count) * 50000000000000000000n;
 
-      // 1. Approve MOTO spend
       const motoContract = getContract<IOP20Contract>(
         MOTO_ADDRESS, OP_20_ABI, provider, NETWORK, address
       );
       const spender = await provider.getPublicKeyInfo(CONTRACT_ADDRESS, true);
-      const approveSim = await motoContract.increaseAllowance(spender, totalCost);
-      if ('error' in approveSim) throw new Error(String(approveSim.error));
 
-      await approveSim.sendTransaction({
-        signer: null,
-        mldsaSigner: null,
-        refundTo: walletAddress,
-        maximumAllowedSatToSpend: 100_000n,
-        network,
-      });
+      // 1. Check existing on-chain allowance — skip approval if sufficient
+      let needsApproval = true;
+      try {
+        setBuyStep('Checking allowance...');
+        const allowanceResult = await motoContract.allowance(address, spender);
+        if (!('error' in allowanceResult)) {
+          const current = allowanceResult.properties.remaining as bigint;
+          if (current >= totalCost) {
+            needsApproval = false;
+          }
+        }
+      } catch {
+        // Can't read allowance — assume we need approval
+      }
 
-      // Wait for approval to confirm on-chain (Signet blocks can take 3-10 min)
-      setBuyStep('Waiting for approval to confirm...');
+      if (needsApproval) {
+        setBuyStep('Approving...');
+        // Approve a large amount so user won't need to re-approve for future purchases
+        const largeApproval = 1_000_000n * 50000000000000000000n; // 1M tickets worth
+        const approveSim = await motoContract.increaseAllowance(spender, largeApproval);
+        if ('error' in approveSim) throw new Error(String(approveSim.error));
+
+        await approveSim.sendTransaction({
+          signer: null,
+          mldsaSigner: null,
+          refundTo: walletAddress,
+          maximumAllowedSatToSpend: 100_000n,
+          feeRate: 10,
+          network,
+        });
+
+        // Wait for approval to confirm on-chain
+        setBuyStep('Waiting for approval to confirm...');
+        const contract = getContract<IKingDick>(
+          CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK, address
+        );
+        let confirmed = false;
+        for (let attempt = 0; attempt < 120; attempt++) {
+          await new Promise((r) => setTimeout(r, 5000));
+          try {
+            const sim = await contract.buyTickets(BigInt(count));
+            if (!('error' in sim)) {
+              confirmed = true;
+              break;
+            }
+          } catch {
+            // Allowance not yet confirmed — keep polling
+          }
+          const mins = Math.floor(((attempt + 1) * 5) / 60);
+          const secs = ((attempt + 1) * 5) % 60;
+          setBuyStep(`Waiting for approval (${mins}:${String(secs).padStart(2, '0')})...`);
+        }
+
+        if (!confirmed) {
+          throw new Error('Approval not confirmed after 10 min — try buying again (approval may still be pending)');
+        }
+      }
+
+      // 2. Buy tickets
+      setBuyStep('Buying tickets...');
       const contract = getContract<IKingDick>(
         CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK, address
       );
-      let buySim = null;
-      for (let attempt = 0; attempt < 120; attempt++) {
-        await new Promise((r) => setTimeout(r, 5000));
-        try {
-          const sim = await contract.buyTickets(BigInt(count));
-          if (!('error' in sim)) {
-            buySim = sim;
-            break;
-          }
-        } catch (_) {
-          // Allowance not yet confirmed — keep polling
-        }
-        const mins = Math.floor(((attempt + 1) * 5) / 60);
-        const secs = ((attempt + 1) * 5) % 60;
-        setBuyStep(`Waiting for approval (${mins}:${String(secs).padStart(2, '0')})...`);
-      }
+      const buySim = await contract.buyTickets(BigInt(count));
+      if ('error' in buySim) throw new Error(String(buySim.error));
 
-      if (!buySim) {
-        throw new Error('Approval not confirmed after 10 min — try buying again (approval may still be pending)');
-      }
-
-      // 2. Buy tickets — approval confirmed
-      setBuyStep('Buying tickets...');
       const txReceipt2 = await buySim.sendTransaction({
         signer: null,
         mldsaSigner: null,
         refundTo: walletAddress,
         maximumAllowedSatToSpend: 100_000n,
+        feeRate: 10,
         network,
       });
       const txId = txReceipt2?.transactionId ?? '';

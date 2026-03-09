@@ -44,11 +44,6 @@ export function useGameState(walletAddress: string | null, address: Address | nu
       const contract = getContract<IKingDick>(CONTRACT_ADDRESS, KingDickAbi, provider, NETWORK);
 
       const stateResult = await contract.getState();
-      if ('error' in stateResult) {
-        console.error('getState error:', stateResult.error);
-        return;
-      }
-
       const p = stateResult.properties;
       setGameState({
         cycleId: p.cycleId,
@@ -66,11 +61,13 @@ export function useGameState(walletAddress: string | null, address: Address | nu
       });
 
       if (address) {
-        const ticketResult = await contract.getMyTickets(address);
-        if (!('error' in ticketResult)) {
+        try {
+          const ticketResult = await contract.getMyTickets(address);
           setMyTickets({
             ticketsThisCycle: ticketResult.properties.ticketsThisCycle,
           });
+        } catch {
+          // getMyTickets may fail if user has no tickets in this cycle
         }
       }
     } catch (e) {

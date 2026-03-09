@@ -25,7 +25,7 @@ try {
 const network = networks.opnetTestnet;
 const provider = new JSONRpcProvider({ url: 'https://testnet.opnet.org', network });
 
-const CONTRACT = 'opt1sqzr6vxl8cp9u89uzj7zcyxr76zdc78urxsl6kx2d';
+const CONTRACT = 'opt1sqqnssdpgnmf7mmxmleeekatkclu0mw3cxg0zmjtg';
 const SNAPSHOT_OFFSET = 135;
 const POLL_INTERVAL = 30_000;
 const COUNTDOWN_INTERVAL = 10; // post countdown every ~10 blocks
@@ -79,7 +79,7 @@ function sendTelegram(text) {
             headers: {
                 'Host': 'api.telegram.org',
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(payload),
+                'Content-Length': new TextEncoder().encode(payload).byteLength,
             },
             rejectUnauthorized: !TELEGRAM_IP, // skip cert check only when using IP
         }, (res) => {

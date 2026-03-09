@@ -180,7 +180,19 @@ export class KingDick extends OP_NET {
         const snapshotBlock = SafeMath.add(this.cycleStart.value, SNAPSHOT_OFFSET);
         if (u256.lt(Blockchain.block.numberU256, snapshotBlock)) throw new Revert('Too early');
         if (this.settled.value) throw new Revert('Settled');
-        if (!u256.eq(this.commitHash.value, u256.Zero)) throw new Revert('Already committed');
+
+        // If there's an existing commit, only allow if it's expired
+        if (!u256.eq(this.commitHash.value, u256.Zero)) {
+            const deadline = SafeMath.add(this.commitBlock.value, REVEAL_WINDOW);
+            if (!u256.gt(Blockchain.block.numberU256, deadline)) {
+                throw new Revert('Already committed');
+            }
+            // Expired — clear it inline and proceed with new commit
+            this.commitHash.value      = u256.Zero;
+            this.commitBlock.value     = u256.Zero;
+            this.committer.value       = u256.Zero;
+            this.commitBlockHash.value = u256.Zero;
+        }
 
         this.commitHash.value      = hash;
         this.commitBlock.value     = Blockchain.block.numberU256;
@@ -225,11 +237,7 @@ export class KingDick extends OP_NET {
         if (!u256.gt(Blockchain.block.numberU256, cBlock)) throw new Revert('Same block');
         const deadline = SafeMath.add(cBlock, REVEAL_WINDOW);
         if (u256.gt(Blockchain.block.numberU256, deadline)) {
-            // Reveal expired — clear commit so someone else can try
-            this.commitHash.value      = u256.Zero;
-            this.commitBlock.value     = u256.Zero;
-            this.committer.value       = u256.Zero;
-            this.commitBlockHash.value = u256.Zero;
+            // Reveal expired — revert (commit gets cleared in next commitSettle call)
             throw new Revert('Reveal expired');
         }
 
@@ -394,10 +402,10 @@ export class KingDick extends OP_NET {
         return Address.fromUint8Array(b);
     }
 
-    // Dev fee: 786ca983 d8597daf 81b18f8e db0e24b8 287d2390 d3912d77 6b4e4fb5 576ad602
+    // Dev fee: opt1p47h427fs9t2d36j7yggdfg4crr5plwpw7ww5e7rh7rd2wjy73jnqh5jdg0
     private _dev(): Address {
         const b = new Uint8Array(32);
-        b[0]=120;b[1]=108;b[2]=169;b[3]=131;b[4]=216;b[5]=89;b[6]=125;b[7]=175;b[8]=129;b[9]=177;b[10]=143;b[11]=142;b[12]=219;b[13]=14;b[14]=36;b[15]=184;b[16]=40;b[17]=125;b[18]=35;b[19]=144;b[20]=211;b[21]=145;b[22]=45;b[23]=119;b[24]=107;b[25]=78;b[26]=79;b[27]=181;b[28]=87;b[29]=106;b[30]=214;b[31]=2;
+        b[0]=175;b[1]=175;b[2]=85;b[3]=121;b[4]=48;b[5]=42;b[6]=212;b[7]=216;b[8]=234;b[9]=94;b[10]=34;b[11]=16;b[12]=212;b[13]=162;b[14]=184;b[15]=24;b[16]=232;b[17]=31;b[18]=184;b[19]=46;b[20]=243;b[21]=157;b[22]=76;b[23]=248;b[24]=119;b[25]=240;b[26]=218;b[27]=167;b[28]=72;b[29]=158;b[30]=140;b[31]=166;
         return Address.fromUint8Array(b);
     }
 }

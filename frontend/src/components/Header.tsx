@@ -1,12 +1,16 @@
 export function Header() {
   return (
-    <div className="header">
-      <span className="mascot">🍆</span>
-      <div className="title">DickBot Daily</div>
-      <div className="subtitle">144 Blocks, One Massive Winner</div>
-      <div className="subtitle" style={{ marginTop: 6, color: '#d966ff' }}>
-        Every inch strengthens MOTO
-      </div>
+    <div className="header" style={{ padding: '12px 0', maxWidth: 480, margin: '0 auto' }}>
+      <img
+        src="./banner.jpg"
+        alt="DickBot Daily Lottery — Win Big Every Day!"
+        style={{
+          width: '100%',
+          height: 'auto',
+          objectFit: 'contain',
+          opacity: 0.8,
+        }}
+      />
     </div>
   );
 }

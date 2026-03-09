@@ -8,9 +8,10 @@ export function HowItWorks() {
           costs 50 MOTO. The more tickets you hold, the better your odds. Simple.
         </div>
         <div style={{ marginBottom: 12 }}>
-          ⛓ <span style={{ color: 'var(--text)' }}>100% on-chain and provably fair.</span> The
-          winner is determined by the hash of a specific Bitcoin block — a number nobody can
-          predict or manipulate. No admin, no randomness oracle, no trust required.
+          ⛓ <span style={{ color: 'var(--text)' }}>100% on-chain and provably fair.</span> Winner
+          selection uses commit-reveal: the settler commits a secret hash, then reveals it after
+          a block is mined. The winner is derived from sha256(secret + block hash) — neither the
+          settler nor the miner can control the outcome. No admin, no oracle, no trust required.
         </div>
         <div style={{ marginBottom: 12 }}>
           ⚡ <span style={{ color: 'var(--text)' }}>What is a Settler?</span> Anyone can settle

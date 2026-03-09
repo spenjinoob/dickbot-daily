@@ -11,6 +11,7 @@ export function PrizeSplit({ gameState }: PrizeSplitProps) {
   const remainder = pot - settlerAmt;
   const winnerAmt = remainder * 850n / 1000n;
   const stakingAmt = remainder * 100n / 1000n;
+  const devAmt = remainder - winnerAmt - stakingAmt;
 
   return (
     <div className="panel">
@@ -32,6 +33,13 @@ export function PrizeSplit({ gameState }: PrizeSplitProps) {
             <div className="prize-bar" style={{ width: '10%', background: 'var(--purple)' }} />
           </div>
           <span className="prize-pct">{formatMoto(stakingAmt)} MOTO</span>
+        </div>
+        <div className="prize-row">
+          <span className="prize-label">🛠 Dev</span>
+          <div className="prize-bar-wrap">
+            <div className="prize-bar" style={{ width: '5%', background: 'var(--pink)' }} />
+          </div>
+          <span className="prize-pct">{formatMoto(devAmt)} MOTO</span>
         </div>
         <div className="prize-row">
           <span className="prize-label">⚡ Settler</span>
